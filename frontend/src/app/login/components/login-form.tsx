@@ -7,6 +7,7 @@ import { PasswordStep } from "./password-step";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { saveToken } from "@/lib/auth";
+import { useRouter } from 'next/navigation';
 
 export type LoginData = {
   email: string;
@@ -36,6 +37,7 @@ function AnimatedStep({
 }
 
 export function LoginForm() {
+  const router = useRouter();
   const [step, setStep] = useState<StepType>("email");
   const [loginData, setLoginData] = useState<Partial<LoginData>>({});
   const [loginError, setLoginError] = useState<string | null>(null);
