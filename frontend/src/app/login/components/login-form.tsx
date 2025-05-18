@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { EmailStep } from "./email-step";
 import { PasswordStep } from "./password-step";
 import { toast } from "sonner";
+import { useRouter } from 'next/navigation';
 
 export type LoginData = {
   email: string;
@@ -34,6 +35,7 @@ function AnimatedStep({
 }
 
 export function LoginForm() {
+  const router = useRouter();
   const [step, setStep] = useState<StepType>("email");
   const [loginData, setLoginData] = useState<Partial<LoginData>>({});
   
@@ -50,10 +52,13 @@ export function LoginForm() {
     try {
       // This would be replaced with your actual API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Logging in with", finalData);
+      console.log("Logging in with", finalData);      toast.success("Successfully logged in!");
       
-      toast.success("Successfully logged in!");
-      // Redirect or update authentication state here
+      // Redirect to dashboard
+      setTimeout(() => {
+        // Use the router to navigate to ensure correct routing
+        router.push('/dashboard');
+      }, 500);
     } catch (error) {
       toast.error("Login failed. Please try again.");
       setStep("password");
