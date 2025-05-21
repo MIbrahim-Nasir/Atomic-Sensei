@@ -49,12 +49,12 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Static method for user signin
-userSchema.statics.signin = async function(username, password) {
-  if (!username || !password) {
+userSchema.statics.signin = async function(email, password) {
+  if (!email || !password) {
     throw new Error('All fields must be filled');
   }
 
-  const user = await this.findOne({ username });
+  const user = await this.findOne({ email });
   if (!user) {
     throw new Error('User not found');
   }
