@@ -3,7 +3,7 @@
 import { useState, useRef, FormEvent, ChangeEvent, useEffect } from "react";
 import { authService } from "@/services/auth.service";
 import { motion } from "framer-motion";
-import { 
+import {
   UserCircleIcon, 
   EnvelopeIcon, 
   AcademicCapIcon,
