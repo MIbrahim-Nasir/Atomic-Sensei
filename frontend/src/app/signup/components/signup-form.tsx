@@ -101,6 +101,9 @@ export function SignupForm() {
       
       toast.success("Account created successfully!");
       setStep("success");
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to create account. Please try again.";
       toast.error(errorMessage);

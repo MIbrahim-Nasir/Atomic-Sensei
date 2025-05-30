@@ -1,6 +1,21 @@
 // Mock roadmap service for frontend development
 
+interface Submodule {
+  title: string;
+  duration: string;
+}
+
 interface Module {
+  title: string;
+  duration: string;
+  submodules: Record<string, Submodule>;
+}
+
+export interface GeneratedRoadmap {
+  [key: string]: Module;
+}
+
+interface ModuleOld {
   id: string;
   title: string;
   description: string;
@@ -12,12 +27,18 @@ export interface Roadmap {
   _id: string;
   title: string;
   description: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  tags?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
   progress: number;
-  modules: Module[];
+  modules?: ModuleOld[];
+  topics?: string[];
   image?: string;
+}
+
+interface CreateRoadmapInput {
+  title: string;
+  resources?: string;
 }
 
 // Mock data
@@ -131,7 +152,7 @@ class RoadmapService {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    return [
+    return []||[
       {
         _id: "1",
         title: "Machine Learning Fundamentals",
@@ -154,6 +175,107 @@ class RoadmapService {
         topics: ["Bias", "Transparency", "Accountability"]
       }
     ];
+  }
+
+  /**
+   * Create a new roadmap based on the user's input
+   * @param data Object containing title and optional resources
+   * @returns The newly created roadmap and its structured format
+   */
+  async createRoadmap(data: CreateRoadmapInput): Promise<{roadmap: Roadmap, generatedContent: GeneratedRoadmap}> {
+    try {
+      // Get the authentication token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      console.log('Creating roadmap with data:', data);
+      // Make the API call to generate roadmap
+      const response = await fetch('http://13.221.1.168/api/generate-roadmap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to create roadmap: ${response.status}`);
+      }
+
+      // Get the generated content (module structure)
+      const generatedContent: GeneratedRoadmap = await response.json();
+      
+      // For testing, you can use this mock data if API is not ready
+      // const generatedContent: GeneratedRoadmap = this.getMockRoadmapData(data.title);
+      
+      // Create a roadmap object based on the generated content
+      const topics: string[] = [];
+      
+      Object.values(generatedContent).forEach(module => {
+        topics.push(module.title);
+      });
+      
+      const roadmap: Roadmap = {
+        _id: Date.now().toString(), // Temporary ID until backend assigns one
+        title: data.title,
+        description: `A personalized learning roadmap for ${data.title}`,
+        tags: ['Generated', 'Personalized'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        progress: 0, // Initial progress
+        topics: topics.slice(0, 3), // Just show first 3 topics as preview
+        image: `https://source.unsplash.com/random/800x600?${encodeURIComponent(data.title)}`,
+      };
+      
+      return { roadmap, generatedContent };
+    } catch (error) {
+      console.error('Error creating roadmap:', error);
+      throw error;
+    }
+  }
+  
+  // Optional: Mock data for testing without API
+  private getMockRoadmapData(title: string): GeneratedRoadmap {
+    return {
+      "module-1": {
+        "title": "Python Fundamentals",
+        "duration": "2 weeks",
+        "submodules": {
+          "submodule-1": {
+            "title": "Introduction to Python and Setup",
+            "duration": "3 days"
+          },
+          "submodule-2": {
+            "title": "Data Types, Variables, and Operators",
+            "duration": "4 days"
+          },
+          "submodule-3": {
+            "title": "Control Flow: Conditionals and Loops",
+            "duration": "3 days"
+          }
+        }
+      },
+      "module-2": {
+        "title": "Data Structures and Functions",
+        "duration": "3 weeks",
+        "submodules": {
+          "submodule-1": {
+            "title": "Lists and Tuples",
+            "duration": "5 days"
+          },
+          "submodule-2": {
+            "title": "Dictionaries and Sets",
+            "duration": "4 days"
+          },
+          "submodule-3": {
+            "title": "Functions and Modules",
+            "duration": "5 days"
+          }
+        }
+      }
+    };
   }
 }
 
