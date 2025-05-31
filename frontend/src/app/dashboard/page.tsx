@@ -1,28 +1,26 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { roadmapService, GeneratedRoadmap } from '@/services/roadmap.service';
-import { CreateRoadmapForm } from '@/components/forms/CreateRoadmapForm';
-import { RoadmapView } from '@/components/roadmaps/RoadmapView';
+import Link from 'next/link';
+import { roadmapService } from '@/services/roadmap.service';
+import { authService } from '@/services/auth.service';
 import RoadmapCard from '@/components/dashboard/RoadmapCard';
-import { toast } from 'sonner';
-import { isAuthenticated } from '@/lib/auth';
+import { CreateRoadmapForm } from '@/components/forms/CreateRoadmapForm';
 import { 
   ChartBarIcon, 
   ClockIcon, 
   FireIcon, 
   BookOpenIcon,
-  PlusIcon
+  PlusCircleIcon
 } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const [roadmaps, setRoadmaps] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [generatedRoadmap, setGeneratedRoadmap] = useState<GeneratedRoadmap | null>(null);
-  const [newRoadmapTitle, setNewRoadmapTitle] = useState('');
-  const [showGeneratedView, setShowGeneratedView] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const stats = [
     { name: 'Lessons Completed', value: '42', icon: BookOpenIcon, color: 'bg-blue-500', change: '+8% from last week' },
@@ -32,18 +30,13 @@ export default function DashboardPage() {
   ];
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      window.location.href = '/login';
-      return;
-    }
-    
     const fetchData = async () => {
       try {
+        setUser(authService.getCurrentUser());
         const data = await roadmapService.getRoadmaps();
         setRoadmaps(data);
       } catch (error) {
         console.error('Error fetching roadmaps:', error);
-        toast.error('Failed to load roadmaps');
       } finally {
         setLoading(false);
       }
@@ -52,55 +45,40 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const handleCreateRoadmap = async (data: { title: string; resources?: string }) => {
+  const handleCreateRoadmap = async (formData) => {
     try {
-      setIsCreateModalOpen(false);
-      // Show loading state
-      toast.loading('Generating your personalized roadmap...', { id: 'roadmap-loading' });
+      await roadmapService.createRoadmap(formData);
+      toast.success("Roadmap created successfully!");
       
-      const { roadmap, generatedContent } = await roadmapService.createRoadmap(data);
-      
-      // Update success state
-      toast.success('Roadmap created successfully!', { id: 'roadmap-loading' });
-      
-      // Set the generated content and show the detailed view
-      setGeneratedRoadmap(generatedContent);
-      setNewRoadmapTitle(data.title);
-      setShowGeneratedView(true);
-      
-      // Also update the roadmaps list with the new roadmap
-      setRoadmaps(prev => [...prev, roadmap]);
+      // Refresh roadmaps list
+      const updatedRoadmaps = await roadmapService.getRoadmaps();
+      setRoadmaps(updatedRoadmaps);
     } catch (error) {
       console.error('Error creating roadmap:', error);
-      toast.error('Failed to create roadmap. Please try again.', { id: 'roadmap-loading' });
+      toast.error(error.message || 'Failed to create roadmap');
       throw error;
     }
   };
 
-  const handleBackToRoadmaps = () => {
-    setShowGeneratedView(false);
-    setGeneratedRoadmap(null);
-  };
-
-  if (showGeneratedView && generatedRoadmap) {
-    return (
-      <RoadmapView 
-        title={newRoadmapTitle}
-        generatedRoadmap={generatedRoadmap}
-        onBack={handleBackToRoadmaps}
-      />
-    );
-  }
-
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user?.name || 'Learner'}!
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Track your learning progress and continue your journey
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.name || 'Learner'}!
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Track your learning progress and continue your journey
+          </p>
+        </div>
+        
+        <Button
+          onClick={() => setIsFormOpen(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+        >
+          <PlusCircleIcon className="mr-2 h-5 w-5" />
+          New Roadmap
+        </Button>
       </div>
 
       {/* Stats Section */}
@@ -136,18 +114,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Roadmaps Section */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-gray-900">Your Learning Roadmaps</h2>
-        {roadmaps.length > 0 && (
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create Roadmap
-          </button>
-        )}
-      </div>
+      <h2 className="text-lg font-medium text-gray-900 mb-4">Your Learning Roadmaps</h2>
       
       {loading ? (
         <div className="text-center py-12">
@@ -164,25 +131,22 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="text-center py-12 bg-white rounded-lg shadow">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mb-4">
-            <BookOpenIcon className="h-8 w-8 text-blue-600" />
-          </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">You don't have any roadmaps yet</h3>
           <p className="text-gray-500 mb-6">Create your first learning roadmap to get started</p>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300"
+          <Button
+            onClick={() => setIsFormOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Create Your First Roadmap
-          </button>
+            <PlusCircleIcon className="mr-2 h-5 w-5" />
+            Create Roadmap
+          </Button>
         </div>
       )}
 
-      {/* Create Roadmap Modal */}
-      <CreateRoadmapForm
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+      {/* Create Roadmap Form Dialog */}
+      <CreateRoadmapForm 
+        isOpen={isFormOpen} 
+        onClose={() => setIsFormOpen(false)}
         onSubmit={handleCreateRoadmap}
       />
     </div>

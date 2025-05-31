@@ -1,39 +1,196 @@
-// Mock authentication service for frontend development
+// Authentication service for frontend
 
 interface User {
-  id: string;
-  name: string;
+  _id: string;
+  username: string;
   email: string;
-  role: string;
+  age?: number;
+  educationLevel?: string;
+  currentKnowledge?: string;
+  token?: string;
 }
-
-// Mock user data
-const mockUser: User = {
-  id: '1',
-  name: 'Sarah Connor',
-  email: 'sarah.connor@example.com',
-  role: 'learner',
-};
 
 class AuthService {
   /**
+   * Sign in user
+   */
+  async signin(email: string, password: string): Promise<User> {
+    try {
+      const response = await fetch('http://localhost:5000/api/user/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sign in');
+      }
+
+      const userData = await response.json();
+      
+      // Store token in localStorage
+      if (userData.token) {
+        localStorage.setItem('token', userData.token);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+
+      return userData;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sign up user
+   */
+  async signup(userData: {
+    username: string;
+    password: string;
+    email: string;
+    age?: number;
+    educationLevel?: string;
+    currentKnowledge: string;
+  }): Promise<User> {
+    try {
+      const response = await fetch('http://localhost:5000/api/user/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sign up');
+      }
+
+      const user = await response.json();
+      
+      // Store token in localStorage
+      if (user.token) {
+        localStorage.setItem('token', user.token);
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      return user;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sign out user
+   */
+  signout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Optionally, redirect to login page
+  }
+
+  /**
    * Get the current logged in user
    */
-  getCurrentUser() {
-    // In a real implementation, this would fetch from localStorage or a server
-    return {
-      name: "Alex Chen",
-      email: "alex@example.com",
-      role: "student"
-    };
+  getCurrentUser(): User | null {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    
+    try {
+      return JSON.parse(userStr) as User;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
   }
 
   /**
    * Check if user is authenticated
    */
-  isAuthenticated() {
-    // Check if the user is authenticated
-    return true;
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem('token');
+  }
+
+  /**
+   * Get user token
+   */
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  /**
+   * Refresh user profile from server
+   */
+  async refreshUserProfile(): Promise<User | null> {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5000/api/user/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const userData = await response.json();
+      
+      // Update stored user data
+      userData.token = token; // Keep the existing token
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      return userData;
+    } catch (error) {
+      console.error('Error refreshing user profile:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(profileData: {
+    email?: string;
+    age?: number;
+    educationLevel?: string;
+    preferredContentType?: string;
+  }): Promise<User | null> {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5000/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      const updatedUser = await response.json();
+      
+      // Update stored user data
+      updatedUser.token = token; // Keep the existing token
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      return updatedUser;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
   }
 }
 

@@ -1,3 +1,4 @@
+// filepath: c:\Users\ABDUL_RUB\Desktop\Projects\Web_dev\Atomic-Sensei\frontend\src\components\ui\badge.tsx
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 

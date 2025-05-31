@@ -3,34 +3,42 @@ import mongoose from 'mongoose';
 const roadmapSchema = new mongoose.Schema({
   course_title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   description: {
     type: String,
-    required: true
+    default: '',
+    trim: true
   },
   duration: {
     type: String,
-    required: true
+    default: 'Self-paced'
   },
   level: {
     type: String,
-    required: true,
-    enum: ['Beginner', 'Intermediate', 'Advanced']
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'All Levels'],
+    default: 'Beginner'
+  },
+  overallProgress: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
   },
   modules: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Module'
   }],
-  overallProgress: {
-    type: Number,
-    default: 0 // Percentage of completion
-  },
-  isActive: {
-    type: Boolean,
-    default: true
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
 const Roadmap = mongoose.model('Roadmap', roadmapSchema);
+
 export default Roadmap;
