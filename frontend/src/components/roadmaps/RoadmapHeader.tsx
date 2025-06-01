@@ -16,9 +16,12 @@ export function RoadmapHeader({
   description,
   level,
   duration,
-  overallProgress,
+  overallProgress = 0, // Provide default value of 0
   onBack
 }: RoadmapHeaderProps) {
+  // Ensure progress is a valid number between 0-100
+  const safeProgress = isNaN(overallProgress) ? 0 : Math.max(0, Math.min(100, overallProgress));
+  
   return (
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
       <div>
@@ -52,7 +55,7 @@ export function RoadmapHeader({
       <div className="flex items-center gap-3">
         <div className="text-right">
           <p className="text-sm font-medium text-gray-500">Overall Progress</p>
-          <p className="text-xl font-bold text-blue-600">{overallProgress}%</p>
+          <p className="text-xl font-bold text-blue-600">{safeProgress}%</p>
         </div>
         <div className="w-16 h-16 rounded-full flex items-center justify-center border-4 border-blue-100 bg-white">
           <svg className="w-12 h-12">
@@ -69,7 +72,8 @@ export function RoadmapHeader({
               className="text-blue-600"
               strokeWidth="5"
               strokeDasharray={2 * Math.PI * 18}
-              strokeDashoffset={2 * Math.PI * 18 * (1 - overallProgress / 100)}
+              // Convert calculation result to string to avoid React warning
+              strokeDashoffset={`${2 * Math.PI * 18 * (1 - safeProgress / 100)}`}
               strokeLinecap="round"
               stroke="currentColor"
               fill="transparent"

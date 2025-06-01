@@ -6,7 +6,6 @@ import { EmailStep } from "./email-step";
 import { PasswordStep } from "./password-step";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { saveToken } from "@/lib/auth";
 import { authService } from "@/services/auth.service";
 
 export type LoginData = {
@@ -49,15 +48,22 @@ export function LoginForm() {
 
   const handlePasswordSubmit = async (password: string) => {
     setStep("authenticating");
-    const finalData = { ...loginData, password } as LoginData;
     setLoginError(null);
     
     try {
-      // Direct fetch API call
-      const user = authService.signin(finalData.email, finalData.password);
-      if (!user) {
-        console.error("User not found");
+      // Make sure email and password are both available and not empty
+      if (!loginData.email?.trim()) {
+        throw new Error("Email is required");
       }
+      
+      if (!password?.trim()) {
+        throw new Error("Password is required");
+      }
+      
+      console.log('Login attempt with email:', loginData.email);
+      
+      // Add await here
+      const user = await authService.signin(loginData.email, password);
       
       // Show success message
       toast.success("Successfully logged in!");
@@ -66,11 +72,10 @@ export function LoginForm() {
       setTimeout(() => {
         router.push('/dashboard');
       }, 1000);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Login failed. Please try again.";
+    } catch (error: any) {
       console.error("Login error:", error);
-      setLoginError(errorMessage);
-      toast.error(errorMessage);
+      setLoginError(error.message || "Login failed. Please try again.");
+      toast.error(error.message || "Login failed. Please try again.");
       setStep("password");
     }
   };

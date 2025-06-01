@@ -34,10 +34,10 @@ const userController = {
 
   // User signin
   signin: async (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     
     try {
-      const user = await User.signin(username, password);
+      const user = await User.signin(email, password);
       
       // Update last active timestamp
       user.lastActive = Date.now();

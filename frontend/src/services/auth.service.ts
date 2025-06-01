@@ -18,28 +18,73 @@ class AuthService {
    */
   async signin(email: string, password: string): Promise<User> {
     try {
+      // Trim and validate inputs
+      const trimmedEmail = email?.trim();
+      const trimmedPassword = password?.trim();
+      
+      if (!trimmedEmail || !trimmedPassword) {
+        throw new Error('Email and password are required');
+      }
+      
+      console.log('Attempting signin with:', { email: trimmedEmail });
+      
       const response = await fetch('http://localhost:5000/api/user/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ 
+          email: trimmedEmail, 
+          password: trimmedPassword 
+        })
       });
 
+      // Important: Handle different response statuses properly
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sign in');
+        // Try to parse response body, but handle empty responses
+        let errorMessage = 'Failed to sign in';
+        
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.error) {
+            errorMessage = errorData.error;
+          } else if (response.status === 401) {
+            errorMessage = 'Invalid email or password';
+          }
+        } catch (parseError) {
+          // If JSON parsing fails (empty body), use status-based message
+          if (response.status === 401) {
+            errorMessage = 'Invalid email or password';
+          } else if (response.status === 400) {
+            errorMessage = 'All fields must be filled';
+          }
+        }
+        
+        console.error('Login failed with status:', response.status);
+        throw new Error(errorMessage);
       }
 
-      const userData = await response.json();
+      // Parse the successful response
+      let userData;
+      try {
+        userData = await response.json();
+      } catch (parseError) {
+        throw new Error('Invalid response from server');
+      }
       
-      // Store token in localStorage
-      if (userData.token) {
-        localStorage.setItem('token', userData.token);
-        localStorage.setItem('user', JSON.stringify(userData));
+      // Validate the response contains what we need
+      if (!userData || !userData.token) {
+        throw new Error('Invalid response format');
       }
-
-      return userData;
+      
+      // Store token and user data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', userData.token);
+        localStorage.setItem('user', JSON.stringify(userData.user || userData));
+      }
+      
+      console.log('Login successful');
+      return userData.user || userData;
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -74,7 +119,7 @@ class AuthService {
       const user = await response.json();
       
       // Store token in localStorage
-      if (user.token) {
+      if (typeof window !== 'undefined') {
         localStorage.setItem('token', user.token);
         localStorage.setItem('user', JSON.stringify(user));
       }
@@ -190,7 +235,13 @@ class AuthService {
       
       // Update stored user data
       updatedUser.token = token; // Keep the existing token
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // This condition is inverted! It should be checking if window IS defined
+      // Current code: if (typeof window !== 'undefined') return null;
+      // Fixed code:
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
       
       return updatedUser;
     } catch (error) {

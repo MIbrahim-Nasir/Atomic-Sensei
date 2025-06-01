@@ -18,16 +18,11 @@ import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const router = useRouter();
-  if (typeof window !== 'undefined') {
-    if (!authService.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-  }
   const [roadmaps, setRoadmaps] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const stats = [
     { name: 'Lessons Completed', value: '42', icon: BookOpenIcon, color: 'bg-blue-500', change: '+8% from last week' },
@@ -36,7 +31,22 @@ export default function DashboardPage() {
     { name: 'Quiz Score Avg', value: '85%', icon: ChartBarIcon, color: 'bg-purple-500', change: '+5% from last month' },
   ];
 
+  // Separate effect for auth checking
   useEffect(() => {
+    // Check auth status
+    const isAuthenticated = authService.isAuthenticated();
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  // Only fetch data after auth check is complete and user is authenticated
+  useEffect(() => {
+    if (!authChecked || !authService.isAuthenticated()) {
+      return; // Don't fetch data if not authenticated
+    }
+
     const fetchData = async () => {
       try {
         setUser(authService.getCurrentUser());
@@ -44,13 +54,26 @@ export default function DashboardPage() {
         setRoadmaps(data);
       } catch (error) {
         console.error('Error fetching roadmaps:', error);
+        // If error is due to authentication, redirect
+        if (error.response?.status === 401) {
+          router.push('/login');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [router, authChecked]);
+
+  // Show loading state until auth check is complete
+  if (!authChecked || (authChecked && !authService.isAuthenticated())) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   const handleCreateRoadmap = async (formData) => {
     try {
