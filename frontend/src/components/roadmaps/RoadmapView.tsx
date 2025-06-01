@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { CheckCircle, Clock, BookOpen, ChevronRight, ArrowLeft, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { roadmapService } from '@/services/roadmap.service';
+import { ModuleContentDialog } from '@/components/modules/ModuleContentDialog';
 
 interface Topic {
   _id?: string;
@@ -42,8 +43,20 @@ interface RoadmapViewProps {
   onBack: () => void;
 }
 
+interface ProgressState {
+  moduleProgress: number; // Overall progress percentage
+  overallProgress: number;
+}
+
 export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
   const [activeModule, setActiveModule] = useState<string | undefined>(roadmap?.modules?.[0]?._id);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
+  const [progress, setProgress] = useState<ProgressState>({moduleProgress:Math.round(roadmap?.overallProgress || 0),overallProgress:Math.round(roadmap?.overallProgress || 0)});
+
+  useEffect(() => {
+
+  }, [progress]);
 
   if (!roadmap) {
     return (
@@ -69,7 +82,8 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
       
       // Call API to update progress
       const result = await roadmapService.updateTopicProgress(roadmap._id, moduleId, topic);
-      
+      console.log('Progress updated:', result);
+      setProgress({moduleProgress: Math.round(result.moduleProgress), overallProgress: Math.round(result.overallProgress)});
       // Update the local state (Note: you'll need to manage state for this to work)
       // This is a placeholder for your state update logic
       toast.success('Topic marked as complete!');
@@ -77,6 +91,11 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
       console.error('Error updating progress:', error);
       toast.error('Failed to update progress');
     }
+  };
+
+  const handleTopicClick = (topic: string) => {
+    setSelectedTopic(topic);
+    setIsContentDialogOpen(true);
   };
 
   return (
@@ -113,7 +132,7 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-sm font-medium text-gray-500">Overall Progress</p>
-            <p className="text-xl font-bold text-blue-600">{Math.round(roadmap.overallProgress || 0)}%</p>
+            <p className="text-xl font-bold text-blue-600">{progress.overallProgress}%</p>
           </div>
           <div className="w-16 h-16 rounded-full flex items-center justify-center border-4 border-blue-100 bg-white">
             <svg className="w-12 h-12">
@@ -245,7 +264,7 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium text-gray-700">Module Progress</span>
                       <span className="text-sm font-medium text-blue-600">
-                        {Math.round(currentModule.progress)}%
+                        {progress.moduleProgress}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -271,7 +290,10 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
                               
                               return (
                                 <div key={index} className="flex items-start justify-between bg-gray-50 rounded-lg p-3">
-                                  <div className="flex items-start">
+                                  <div 
+                                    className="flex items-start flex-1 cursor-pointer" 
+                                    onClick={() => handleTopicClick(topic)}
+                                  >
                                     {isCompleted ? (
                                       <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 mr-2 flex-shrink-0" />
                                     ) : (
@@ -288,7 +310,10 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
                                     <Button 
                                       size="sm"
                                       className="bg-green-600 hover:bg-green-700 text-white"
-                                      onClick={() => handleMarkComplete(currentModule._id, topic)}
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Prevent opening the dialog when clicking the button
+                                        handleMarkComplete(currentModule._id, topic);
+                                      }}
                                     >
                                       <CheckCircle className="mr-1 h-3 w-3" />
                                       Mark Complete
@@ -312,6 +337,14 @@ export function RoadmapView({ roadmap, onBack }: RoadmapViewProps) {
           </div>
         </div>
       </Card>
+
+      {selectedTopic && (
+        <ModuleContentDialog
+          isOpen={isContentDialogOpen}
+          topic={selectedTopic}
+          onClose={() => setIsContentDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

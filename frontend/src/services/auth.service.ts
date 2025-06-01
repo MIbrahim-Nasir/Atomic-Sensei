@@ -10,6 +10,8 @@ interface User {
   token?: string;
 }
 
+import { clientUtils } from '@/lib/client-utils';
+
 class AuthService {
   /**
    * Sign in user
@@ -88,15 +90,18 @@ class AuthService {
    * Sign out user
    */
   signout(): void {
+    if (typeof window === 'undefined') return;
+    
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Optionally, redirect to login page
   }
 
   /**
    * Get the current logged in user
    */
   getCurrentUser(): User | null {
+    if (typeof window === 'undefined') return null;
+    
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
     
@@ -112,13 +117,14 @@ class AuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+    return !!this.getToken();
   }
 
   /**
    * Get user token
    */
   getToken(): string | null {
+    if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');
   }
 

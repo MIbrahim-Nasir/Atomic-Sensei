@@ -7,6 +7,7 @@ import { PasswordStep } from "./password-step";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { saveToken } from "@/lib/auth";
+import { authService } from "@/services/auth.service";
 
 export type LoginData = {
   email: string;
@@ -53,29 +54,10 @@ export function LoginForm() {
     
     try {
       // Direct fetch API call
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/user/signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: finalData.email,
-          password: finalData.password
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+      const user = authService.signin(finalData.email, finalData.password);
+      if (!user) {
+        console.error("User not found");
       }
-      
-      // Store token using the utility function
-      if (data.token) {
-        saveToken(data.token);
-      }
-      
-      localStorage.setItem("token", data.token);
       
       // Show success message
       toast.success("Successfully logged in!");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { roadmapService } from '@/services/roadmap.service';
 import { authService } from '@/services/auth.service';
 import RoadmapCard from '@/components/dashboard/RoadmapCard';
@@ -17,6 +17,13 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  if (typeof window !== 'undefined') {
+    if (!authService.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+  }
   const [roadmaps, setRoadmaps] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

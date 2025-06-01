@@ -11,6 +11,7 @@ import { EducationStep } from "./education-step";
 import { KnowledgeStep } from "./knowledge-step";
 import { SuccessStep } from "./success-step";
 import { useRouter } from "next/navigation";
+import { authService } from "@/services/auth.service";
 
 export type SignupData = {
   name: string;
@@ -80,25 +81,10 @@ export function SignupForm() {
       };
       
       // Use direct fetch instead of auth context
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/user/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Signup failed');
+      const user = await authService.signup(payload);
+      if (!user) {
+        console.log("Failed to create account. Please try again.");
       }
-        // Store token using auth utility
-      localStorage.setItem("token", data.token);
-      if (data.token) {
-        import('@/lib/auth').then(({ saveToken }) => saveToken(data.token));
-      }
-      
       toast.success("Account created successfully!");
       setStep("success");
     } catch (error: unknown) {
