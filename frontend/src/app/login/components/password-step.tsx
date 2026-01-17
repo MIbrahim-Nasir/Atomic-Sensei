@@ -20,9 +20,10 @@ interface PasswordStepProps {
   email: string;
   onSubmit: (password: string) => void;
   onBack: () => void;
+  error?: string | null;
 }
 
-export function PasswordStep({ email, onSubmit, onBack }: PasswordStepProps) {
+export function PasswordStep({ email, onSubmit, onBack, error }: PasswordStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   
   const form = useForm<PasswordFormValues>({
@@ -62,6 +63,16 @@ export function PasswordStep({ email, onSubmit, onBack }: PasswordStepProps) {
             <p>Signing in as <span className="font-medium text-blue-700">{email}</span></p>
           </div>
           
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-3 bg-red-50 border border-red-200 rounded-md"
+            >
+              <p className="text-sm text-red-600">{error}</p>
+            </motion.div>
+          )}
+
           <FormField
             control={form.control}
             name="password"

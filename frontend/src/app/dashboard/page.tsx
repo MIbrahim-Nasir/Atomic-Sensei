@@ -1,21 +1,28 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { roadmapService } from '@/services/roadmap.service';
 import { authService } from '@/services/auth.service';
 import RoadmapCard from '@/components/dashboard/RoadmapCard';
+import { CreateRoadmapForm } from '@/components/forms/CreateRoadmapForm';
 import { 
   ChartBarIcon, 
   ClockIcon, 
   FireIcon, 
-  BookOpenIcon 
+  BookOpenIcon,
+  PlusCircleIcon
 } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [roadmaps, setRoadmaps] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const stats = [
     { name: 'Lessons Completed', value: '42', icon: BookOpenIcon, color: 'bg-blue-500', change: '+8% from last week' },
@@ -24,7 +31,22 @@ export default function DashboardPage() {
     { name: 'Quiz Score Avg', value: '85%', icon: ChartBarIcon, color: 'bg-purple-500', change: '+5% from last month' },
   ];
 
+  // Separate effect for auth checking
   useEffect(() => {
+    // Check auth status
+    const isAuthenticated = authService.isAuthenticated();
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  // Only fetch data after auth check is complete and user is authenticated
+  useEffect(() => {
+    if (!authChecked || !authService.isAuthenticated()) {
+      return; // Don't fetch data if not authenticated
+    }
+
     const fetchData = async () => {
       try {
         setUser(authService.getCurrentUser());
@@ -32,23 +54,61 @@ export default function DashboardPage() {
         setRoadmaps(data);
       } catch (error) {
         console.error('Error fetching roadmaps:', error);
+        // If error is due to authentication, redirect
+        if (error.response?.status === 401) {
+          router.push('/login');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [router, authChecked]);
+
+  // Show loading state until auth check is complete
+  if (!authChecked || (authChecked && !authService.isAuthenticated())) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  const handleCreateRoadmap = async (formData) => {
+    try {
+      await roadmapService.createRoadmap(formData);
+      toast.success("Roadmap created successfully!");
+      
+      // Refresh roadmaps list
+      const updatedRoadmaps = await roadmapService.getRoadmaps();
+      setRoadmaps(updatedRoadmaps);
+    } catch (error) {
+      console.error('Error creating roadmap:', error);
+      toast.error(error.message || 'Failed to create roadmap');
+      throw error;
+    }
+  };
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user?.name || 'Learner'}!
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Track your learning progress and continue your journey
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.name || 'Learner'}!
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Track your learning progress and continue your journey
+          </p>
+        </div>
+        
+        <Button
+          onClick={() => setIsFormOpen(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+        >
+          <PlusCircleIcon className="mr-2 h-5 w-5" />
+          New Roadmap
+        </Button>
       </div>
 
       {/* Stats Section */}
@@ -103,14 +163,22 @@ export default function DashboardPage() {
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <h3 className="text-lg font-medium text-gray-900 mb-2">You don't have any roadmaps yet</h3>
           <p className="text-gray-500 mb-6">Create your first learning roadmap to get started</p>
-          <Link
-            href="/dashboard/roadmaps/create"
+          <Button
+            onClick={() => setIsFormOpen(true)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
+            <PlusCircleIcon className="mr-2 h-5 w-5" />
             Create Roadmap
-          </Link>
+          </Button>
         </div>
       )}
+
+      {/* Create Roadmap Form Dialog */}
+      <CreateRoadmapForm 
+        isOpen={isFormOpen} 
+        onClose={() => setIsFormOpen(false)}
+        onSubmit={handleCreateRoadmap}
+      />
     </div>
   );
 }

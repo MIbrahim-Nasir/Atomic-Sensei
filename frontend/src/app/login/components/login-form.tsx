@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 import { EmailStep } from "./email-step";
 import { PasswordStep } from "./password-step";
 import { toast } from "sonner";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
+import { authService } from "@/services/auth.service";
 
 export type LoginData = {
   email: string;
@@ -35,9 +36,10 @@ function AnimatedStep({
 }
 
 export function LoginForm() {
-  const router = useRouter();
   const [step, setStep] = useState<StepType>("email");
   const [loginData, setLoginData] = useState<Partial<LoginData>>({});
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const router = useRouter();
   
   const handleEmailSubmit = (email: string) => {
     setLoginData({ ...loginData, email });
@@ -46,21 +48,34 @@ export function LoginForm() {
 
   const handlePasswordSubmit = async (password: string) => {
     setStep("authenticating");
-    const finalData = { ...loginData, password } as LoginData;
+    setLoginError(null);
     
-    // Simulate API call
     try {
-      // This would be replaced with your actual API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Logging in with", finalData);      toast.success("Successfully logged in!");
+      // Make sure email and password are both available and not empty
+      if (!loginData.email?.trim()) {
+        throw new Error("Email is required");
+      }
+      
+      if (!password?.trim()) {
+        throw new Error("Password is required");
+      }
+      
+      console.log('Login attempt with email:', loginData.email);
+      
+      // Add await here
+      const user = await authService.signin(loginData.email, password);
+      
+      // Show success message
+      toast.success("Successfully logged in!");
       
       // Redirect to dashboard
       setTimeout(() => {
-        // Use the router to navigate to ensure correct routing
         router.push('/dashboard');
-      }, 500);
-    } catch (error) {
-      toast.error("Login failed. Please try again.");
+      }, 1000);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setLoginError(error.message || "Login failed. Please try again.");
+      toast.error(error.message || "Login failed. Please try again.");
       setStep("password");
     }
   };
@@ -89,6 +104,7 @@ export function LoginForm() {
             email={loginData.email || ""}
             onSubmit={handlePasswordSubmit}
             onBack={() => setStep("email")}
+            error={loginError}
           />
         </AnimatedStep>
 
